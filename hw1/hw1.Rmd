@@ -1,0 +1,164 @@
+---
+title: "HW1 Kryshchenko Anton"
+output: html_document
+---
+
+```{r}
+library(MASS)
+library(lattice)
+
+adv.data <- read.csv("Advertising.csv")
+adv.data$X <- NULL
+splom(adv.data)
+
+```
+
+Построим простую модель 
+
+```{r}
+model.simple <-lm(Sales ~ ., data = adv.data)
+summary(model.simple)
+model.simple
+```
+
+Здесь сразу видно, что Newspaper имеет очень большое значение p-value, а значит является малозначимым признаком => можем его выкинуть. Проверим это с помощью AIC:
+
+```{r}
+model.simple.AIC <- stepAIC(model.simple)
+summary(model.simple.AIC)
+```
+
+Действительно, Newspaper откинулись, как малозначимый признак.
+
+Теперь построим полиномиальную модель второй степени без предиктора Newspaper
+
+```{r}
+model.poly2 <- lm(Sales ~ poly(TV, Radio, degree = 2), data = adv.data)
+summary(model.poly2)
+model.poly2
+
+```
+
+А также AIC
+
+```{r}
+model.poly2.AIC <- stepAIC(model.poly2)
+summary(model.poly2.AIC)
+```
+
+Здесь видно, что нужно откинуть малозначимый предиктор Radio^2 => получаем такую модель
+
+```{r}
+model.final <- lm(Sales ~ TV + Radio + TV:Radio + I(TV^2), data = adv.data)
+summary(model.final)
+model.final
+
+```
+
+Получили хорошую модель с значительно меньшим RSE, чем в model.simple
+
+Теперь разобьем данные на обучающую и тестовую выборку
+
+```{r}
+adv.data.train.i <- sample(nrow(adv.data), size=nrow(adv.data)*0.6)
+adv.data.train <- adv.data[adv.data.train.i, ]
+adv.data.test <- adv.data[-adv.data.train.i, ]
+
+model.simple.train <- lm(Sales ~ . , data = adv.data.train)
+summary(model.simple.train)
+model.simple.train
+```
+
+По полученной регрессии предскажем Sales для adv.data.test
+
+```{r}
+adv.data.predicted <- predict(model.simple.train, adv.data.test)
+xyplot( adv.data.test$Sales ~ adv.data.predicted , type = c("p","r"))
+```
+
+Теперь попробуем построить регрессию на model.final
+
+```{r}
+model.final.train <- lm(Sales ~ TV + Radio + TV:Radio + I(TV^2), data = adv.data)
+adv.data.predicted2 <- predict(model.final.train, adv.data.test)
+xyplot( adv.data.test$Sales ~ adv.data.predicted2 , type = c("p","r"))
+```
+
+Теперь сравним RSS на обучающей и тестовой выборке:
+
+```{r}
+rss <- function(r) sqrt(sum(r^2) / length(r))
+
+c(rss(model.simple.train$residuals), rss(adv.data.predicted - adv.data.test$Sales))
+
+c(rss(model.final.train$residuals), rss(adv.data.predicted2 - adv.data.test$Sales))
+```
+
+Мы видим, что для 2-й модели RSS значительно уменьшилось, т.е. построив полиномиальную модель и откинув незначительные признаки мы сильно улучшили нашу модель
+
+Теперь попробуем поудалять значимые признаки:
+
+```{r}
+model.without.TV.train <- lm(Sales ~ Radio + TV:Radio + I(TV^2), data = adv.data)
+adv.data.predicted3 <- predict(model.without.TV.train, adv.data.test)
+xyplot( adv.data.test$Sales ~ adv.data.predicted3 , type = c("p","r"))
+c(rss(model.without.TV.train$residuals), rss(adv.data.predicted3 - adv.data.test$Sales))
+```
+
+Модель стала себя вести намного хуже - сильно увеличилось RSS
+
+Посмотрим на модель без незначимых признаков и без нелинейности
+
+```{r}
+model.without.poly.train <- lm(Sales ~ TV + Radio , data = adv.data)
+adv.data.predicted4 <- predict(model.without.poly.train, adv.data.test)
+xyplot( adv.data.test$Sales ~ adv.data.predicted4 , type = c("p","r"))
+c(rss(model.without.poly.train$residuals), rss(adv.data.predicted4 - adv.data.test$Sales))
+```
+
+Модель стала себя вести намного хуже даже чем модель без значимого признака TV т.е. можно сделать вывод, что введение монотонной нелинейности очень сильно улучшает поведение на тестовой выборке
+
+Таким образом окончательно оставляем model.final.train:
+
+```{r}
+xyplot( adv.data.test$Sales ~ adv.data.predicted2 , type = c("p","r"))
+c(rss(model.final.train$residuals), rss(adv.data.predicted2 - adv.data.test$Sales))
+
+```
+
+Bootstrap
+```{r}
+
+library(boot)
+bs <- function(formula, data, indices) {
+  d <- data[indices,]
+  fit <- lm(formula, data=d)
+  return(coef(fit)) 
+} 
+b.model.final <- boot(data=adv.data, statistic=bs, 
+    R=1000, formula=Sales ~ TV + Radio + TV:Radio + I(TV^2))
+
+
+b.model.final
+plot(b.model.final, index=1) # intercept 
+plot(b.model.final, index=2) # TV 
+plot(b.model.final, index=3) # Radio 
+plot(b.model.final, index=4) # I(TV^2)
+plot(b.model.final, index=5) # TV:Radio 
+
+model.final <- lm(Sales ~ TV + Radio + TV:Radio + I(TV^2), data = adv.data)
+summary(model.final)
+model.final
+confint(model.final)
+
+# get 95% confidence intervals 
+boot.ci(b.model.final, type="perc", index=1) # intercept 
+boot.ci(b.model.final, type="perc", index=2) # TV
+boot.ci(b.model.final, type="perc", index=3) # Radio
+boot.ci(b.model.final, type="perc", index=4) # I(TV^2)
+boot.ci(b.model.final, type="perc", index=5) # TV:Radio
+
+
+```
+
+

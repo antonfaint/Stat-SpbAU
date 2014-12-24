@@ -1,0 +1,192 @@
+---
+title: "hw4_3"
+output: html_document
+---
+
+```{r}
+library(lattice)
+library(MASS)
+library(boot)
+library(nortest)
+library(e1071)
+
+concr.data <- read.csv("Data/Concrete_Data.csv", comment.char = "#")
+
+
+my.cv <- function(model) { 
+  tune(lm, model$call$formula, data = concr.data, tunecontrol = tune.control(sampling = "cross")) 
+}
+
+bs <- function(formula, data, indices) {
+  d <- data[indices,]
+  fit <- lm(formula, data=d)
+  return(coef(fit)) 
+} 
+
+```
+
+Первая модель с формулой
+ConcreteCompressiveStrength = Cement + Water + BlastFurnaceSlag + FlyAsh + Superplasticizer + Age + Water:Superplasticizer
+
+```{r}
+
+model1 <- lm(ConcreteCompressiveStrength ~ Cement + Water + BlastFurnaceSlag + FlyAsh + Superplasticizer + Age + Water:Superplasticizer, data=concr.data)
+summary(model1)
+
+b.model1 <- boot(data=concr.data, statistic=bs, 
+    R=999, formula=ConcreteCompressiveStrength ~ Cement + Water + BlastFurnaceSlag + FlyAsh + Superplasticizer + Age + Water:Superplasticizer)
+b.model1
+
+```
+
+Теперь проверим на нормальность.
+Есть небольшая проблема с тем, как это сделать. Я попробовал несколько раз перестраивать модель - т.к. бутстрап делает случайные выборки, то результаты сильно отличаются от запуска к запуску. Это хорошо видно как по графикам, так и по результатам теста.
+Есть несколько очень хороших ребят, например бетон и Суперпластик. Для них я решил построить нормальный интервал, потому что они действительно выглядит достаточно нормальными. Однако для остальных я думаю лучше построить перцентильный интервал.
+
+```{r}
+b.model1$t0
+
+plot(b.model1, index=2)
+shapiro.test(b.model1$t[,2])
+
+plot(b.model1, index=6)
+shapiro.test(b.model1$t[,6])
+
+```
+
+
+
+```{r}
+plot(b.model1, index = 1)
+shapiro.test(b.model1$t[,1])$p
+plot(b.model1, index=3)
+shapiro.test(b.model1$t[,3])
+plot(b.model1, index=4)
+shapiro.test(b.model1$t[,4])
+
+plot(b.model1, index=5)
+shapiro.test(b.model1$t[,5])
+plot(b.model1, index=7)
+shapiro.test(b.model1$t[,7])
+
+plot(b.model1, index=8)
+shapiro.test(b.model1$t[,8])
+
+```
+
+
+```{r}
+boot.ci(b.model1, type="perc", index=1) 
+boot.ci(b.model1, type="norm", index=2)
+
+boot.ci(b.model1, type="perc", index=3) 
+boot.ci(b.model1, type="perc", index=4)
+
+boot.ci(b.model1, type="perc", index=5) 
+boot.ci(b.model1, type="norm", index=6)
+
+boot.ci(b.model1, type="perc", index=7) 
+boot.ci(b.model1, type="perc", index=8)
+
+```
+
+Сравним их с интервалами для model1
+
+```{r}
+
+confint(model1)
+```
+
+Действительно многие интервалы получились неплохими, особенно интервалы для Цемента
+
+Для Финальной модели все делается аналогично
+
+```{r}
+concr.data$Water.factor <- concr.data$Water < 225
+concr.data$Age.factor <- concr.data$Age < 150
+model4 <-lm(ConcreteCompressiveStrength ~ Cement + Water.factor:Water + BlastFurnaceSlag + FlyAsh + Superplasticizer + Age.factor:log(Age) + Water:Superplasticizer, data=concr.data)
+summary(model4)
+
+
+b.model4 <- boot(data=concr.data, statistic=bs, 
+    R=999, formula=ConcreteCompressiveStrength ~ Cement + Water.factor:Water + BlastFurnaceSlag + FlyAsh + Superplasticizer + Age.factor:log(Age) + Water:Superplasticizer)
+
+b.model4
+
+
+```
+
+```{r}
+b.model4$t0
+
+plot(b.model4, index = 1)
+shapiro.test(b.model4$t[,1])$p
+
+
+plot(b.model4, index=3)
+shapiro.test(b.model4$t[,3])
+plot(b.model4, index=4)
+shapiro.test(b.model4$t[,4])
+
+
+plot(b.model4, index=6)
+shapiro.test(b.model4$t[,6])
+plot(b.model4, index=7)
+shapiro.test(b.model4$t[,7])
+
+plot(b.model4, index=8)
+shapiro.test(b.model4$t[,8])
+
+
+
+plot(b.model4, index=10)
+shapiro.test(b.model4$t[,10])
+
+```
+
+
+
+```{r}
+
+plot(b.model4, index=2)
+shapiro.test(b.model4$t[,2])
+
+plot(b.model4, index=5)
+shapiro.test(b.model4$t[,5])
+
+plot(b.model4, index=9)
+shapiro.test(b.model4$t[,9])
+
+
+```
+
+
+```{r}
+
+boot.ci(b.model4, type="perc", index=1) 
+boot.ci(b.model4, type="norm", index=2)
+
+boot.ci(b.model4, type="perc", index=3) 
+boot.ci(b.model4, type="perc", index=4)
+
+boot.ci(b.model4, type="norm", index=5) 
+boot.ci(b.model4, type="perc", index=6)
+
+boot.ci(b.model4, type="perc", index=7) 
+boot.ci(b.model4, type="perc", index=8)
+
+boot.ci(b.model4, type="perc", index=9) 
+boot.ci(b.model4, type="norm", index=10)
+
+```
+
+
+Сравним модели
+
+```{r}
+
+my.cv(model1)
+my.cv(model4)
+```
+
+Видим огромный выйгрыш последней модели, относительно первой.

@@ -1,0 +1,115 @@
+---
+title: "hw3_3"
+output: html_document
+---
+
+```{r}
+
+library(lattice)
+library(MASS)
+library(latticeExtra)
+library(e1071)
+library(corrplot)
+library(knitr)
+library(nnet)
+
+seed.data <- read.table('data/seeds_dataset.txt')
+names(seed.data) <- c("area", "perimeter", "compactness", "kernel_length", "kernel_width", "asymmetry", "groove_length", "sort")
+names(seed.data)
+
+
+marginal.plot(seed.data)
+corrplot(cor(seed.data))
+
+splom(~seed.data, data=seed.data,
+      upper.panel=function(x, y, ...) { panel.xyplot(x, y, ...); panel.loess(x, y, ..., col='black')},
+      lower.panel=function(x, y, ...) { },
+      )
+```
+
+Разумеется мы увидели множество линейных зависимостей между различными геометрическими параметрами. Можно сделать вывод, что очень многое здесь сильно коррелирует, так что будем перебирать различные комбинации параметров и выбрасывать ненужные.
+
+```{r}
+seed.idx <- sample(nrow(seed.data), size = nrow(seed.data) * 0.6)
+seed.data.train <- seed.data[seed.idx,]
+seed.data.test <- seed.data[-seed.idx,]
+
+```
+
+Общая модель
+```{r}
+my.lda <- function(formula) {
+  seed.lda1 <- lda(formula , data = seed.data.train)
+  print(seed.lda1)
+  seed.pred1 <- predict(seed.lda1, seed.data.test)
+  
+  print(table(seed.pred1$class, seed.data.test$sort))
+  print(mean(seed.pred1$class != seed.data.test$sort))
+
+  print(tune(lda, formula, data = seed.data, predict.func =  function(...) as.numeric(predict(...)$class)))  
+}
+
+my.lda(sort ~ . )
+```
+
+
+Далее попробуем убрать area perimetr(т.к. через них рассчитывается compactness)
+
+```{r}
+
+
+my.lda(sort ~ groove_length  + kernel_length + groove_length:kernel_length  + kernel_width + perimeter + area)
+
+```
+
+Сначала я решил ввести kernel_length groove_length и kernel_width, т.к. они неплохо отделяют сорта. Затем пробовал вводить новые предикторы - безуспешно. Также ввел перекрестное влияние, т.к. на графиках видна хорошая зависимость, и собственно это улучшило результат. Также попробовал ввести компактнесс, но он сильно портит картину. Поэтому вместо него решил ввести периметр и area, что и дало самую приятную тестовую ошибку на кросвалидации, а также просто на тестовой выборке. 
+Эта модель не очень то сильно лучше общей модели, но все же в ней намного меньше зависимых предикторов, да и на тестовой выборке ошибка в 2 раза меньше. Решил остановиться на этой модели.
+
+Наивный байес
+```{r}
+
+my.bayes <- function(formula) {
+  seed.bayes <- naiveBayes(formula , data = seed.data.train)
+  print(seed.bayes)
+  seed.pred1 <- predict(seed.bayes, seed.data.test)
+  
+  print(table(seed.pred1, seed.data.test$sort))
+  print(mean(seed.pred1 != seed.data.test$sort))
+
+  print(tune(naiveBayes, formula, data = seed.data))  
+}
+my.bayes(as.factor(sort) ~ .)
+```
+
+```{r}
+my.bayes(as.factor(sort) ~ . - area - perimeter)
+
+```
+
+В общем, что бы я не менял на байесе, на тестовой выборке вообще практически ничего не менялось, а кросс валидация изменялась от запуска к запуску в примерно одинаковых рамках
+
+Мультиномиальная регрессия
+```{r}
+my.multinom <- function(formula) {
+  seed.multinom <- multinom(formula , data = seed.data.train, maxit=3000, trace=FALSE)
+  print(seed.multinom)
+  seed.pred1 <- predict(seed.multinom, seed.data.test)
+  
+  print(table(seed.pred1, seed.data.test$sort))
+  print(mean(seed.pred1 != seed.data.test$sort))
+
+  print(tune(multinom, formula, data = seed.data, maxit=3000, trace=FALSE))  
+}
+
+my.multinom(as.factor(sort) ~ .)
+```
+
+Поперебираем различные комбинации
+
+```{r}
+my.multinom(as.factor(sort) ~ . - area - perimeter)
+my.multinom(as.factor(sort) ~ groove_length  + kernel_length + groove_length:kernel_length  + kernel_width + perimeter + area)
+my.multinom(as.factor(sort) ~ . + area:perimeter + compactness:area + compactness:perimeter)
+```
+
+В общим перебирал, перебирал... Обычная модель давала самую маленькую ошибку.

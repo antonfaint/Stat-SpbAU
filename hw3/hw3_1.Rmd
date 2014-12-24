@@ -1,0 +1,151 @@
+---
+title: "hw3_1"
+output: html_document
+---
+
+
+```{r}
+library(lattice)
+library(MASS)
+library(e1071)
+library(latticeExtra)
+library(corrplot)
+
+concr.data <- read.csv("data/Concrete_Data.csv", comment.char = "#")
+panel <- function(...) {  
+  panel.xyplot(...)
+  panel.loess(...)
+}
+
+
+```
+
+```{r}
+xyplot(concr.data$ConcreteCompressiveStrength ~ concr.data$Superplasticizer, panel=panel)
+xyplot(concr.data$ConcreteCompressiveStrength ~ concr.data$Cement, panel=panel)
+
+```
+
+Видна отличная линейная зависимость прочности от цемента, а также от Superplasticizer(далее Суперпластик). Ну это и понятно, т.к. они являются главными скрепляющими и упрочняющими ингредиентами
+
+```{r}
+xyplot(concr.data$ConcreteCompressiveStrength ~ concr.data$Water, panel=panel)
+
+```
+
+С водой происходит не очень понятный скачек вверх после систематического опускания. Вообще говоря мы достигаем минимума при самой большой плотности точек, а далее точек совсем мало, и возможно, дальшейшие результаты можно сбросить на недостаточное количество данных. Попробуем его позже разобрать подробнее.
+
+```{r}
+xyplot(concr.data$ConcreteCompressiveStrength ~ concr.data$CoarseAggregate, panel=panel)
+xyplot(concr.data$ConcreteCompressiveStrength ~ concr.data$FineAggregate, panel=panel)
+```
+
+Аггрегаты очень похожы, и переваливая за 810 практически не влияют на прочность, скорее всего они будут малозначимыми
+
+
+```{r}
+xyplot(concr.data$ConcreteCompressiveStrength ~ concr.data$Age, panel=panel)
+xyplot(concr.data$ConcreteCompressiveStrength ~ concr.data$BlastFurnaceSlag, panel=panel)
+xyplot(concr.data$ConcreteCompressiveStrength ~ concr.data$FlyAsh, panel=panel)
+```
+
+Возраст выглядит совсем неоднородным, видимо его нужно будет сделать фактором
+
+ 
+```{r}
+
+model1 <- lm(ConcreteCompressiveStrength ~ (.), data=concr.data)
+summary(model1)
+```
+
+Посмотрим на корреляцию:
+
+```{r}
+corrplot(cor(concr.data))
+xyplot(concr.data$Water ~ concr.data$Superplasticizer, panel=panel)
+```
+
+Построим модель, откинув не сильно значимые признаки агрегаторов, а также добавим
+Water:Superplasticizer, т.к. между ними явно есть зависимость
+
+```{r}
+
+
+model1 <- lm(ConcreteCompressiveStrength ~ Cement + Water + BlastFurnaceSlag + FlyAsh + Superplasticizer + Age + Water:Superplasticizer, data=concr.data)
+summary(model1)
+```
+
+Немного лучше, но еще не очень.
+
+Посмотрим на графики распределений предикторов:
+
+```{r}
+marginal.plot(concr.data)
+```
+
+Age выглядит совсем плохо, попробуем прологарифмировать
+
+```{r}
+marginal.plot(log(concr.data$Age))
+xyplot(concr.data$ConcreteCompressiveStrength ~ log(concr.data$Age), panel=panel)
+
+```
+
+Стало лучше
+Посмотрим модель
+
+```{r}
+model2 <- lm(ConcreteCompressiveStrength ~ Cement + Water + BlastFurnaceSlag + FlyAsh + Superplasticizer + log(Age) + Water:Superplasticizer, data=concr.data)
+summary(model2)
+```
+
+Намного лучше, но Мне все еще не нравится изломанность графика воды 
+Поэтому можно попробовать добавить фактор  для воды:
+
+```{r}
+concr.data$Water.factor <- concr.data$Water < 225
+model3 <-lm(ConcreteCompressiveStrength ~ Cement + Water.factor:Water + BlastFurnaceSlag + FlyAsh + Superplasticizer + log(Age) + Water:Superplasticizer, data=concr.data)
+summary(model3)
+```
+
+Немного поперебирав значение порога получаем высоко значимый признак Water.factorTrue:Water, который говорит как влияет количство воды до 225 на прочность
+
+Попробуем также и возраст сделать фактором:
+
+```{r}
+concr.data$Age.factor <- concr.data$Age < 150
+model4 <-lm(ConcreteCompressiveStrength ~ Cement + Water.factor:Water + BlastFurnaceSlag + FlyAsh + Superplasticizer + Age.factor:log(Age) + Water:Superplasticizer, data=concr.data)
+summary(model4)
+```
+
+И это тоже улучшило модель
+
+Проверим модели
+
+```{r}
+anova(model1, model2, model3, model4)
+```
+Последняя модель самая лучшая
+
+```{r}
+xyplot(residuals(model1) ~ fitted(model1), panel=panel)
+xyplot(residuals(model2) ~ fitted(model2), panel=panel)
+xyplot(residuals(model3) ~ fitted(model3), panel=panel)
+xyplot(residuals(model4) ~ fitted(model4), panel=panel)
+```
+
+Более менее линейно
+
+```{r}
+
+cv <- function(model) { 
+  tune(lm, model$call$formula, data = concr.data, tunecontrol = tune.control(sampling = "cross")) 
+}
+cv(model1)
+cv(model2)
+cv(model3)
+cv(model4)
+```
+
+На убывание, однако итоговая ошибка все-равно очень велика относительно диапозона прочности
+

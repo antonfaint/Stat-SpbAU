@@ -1,0 +1,82 @@
+---
+title: "hw4_2"
+output: html_document
+---
+
+
+```{r}
+library(lattice)
+library(MASS)
+library(e1071)
+library(corrplot)
+library(latticeExtra)
+library(boot)
+library(mvtnorm)
+library(knitr)
+
+
+my.qda <- function(x, data, ...) {
+  out <- qda(x, data, ...)
+  out$data <- data
+  out
+}
+simple.predict.da <- function(...) predict(...)$class
+make.data <- function(data, groups, model, size = nrow(data), groups.name = "Species") {
+  ind <- sample(seq_along(levels(groups)), size = size, replace = TRUE)
+  res <- data.frame(name = factor(levels(groups)[ind], levels = levels(groups)))
+  names(res) <- groups.name
+  mx <- model$means[ind,]
+  mx <- mx + rmvnorm(nrow(mx), sigma = model$cov)
+  colnames(mx) <- colnames(model$cov)
+  res <- cbind(res, as.data.frame(mx))
+  rownames(res) <- NULL
+  res
+}
+
+```
+
+Вводим модель оценки матриц ковариации отдельно по сортам
+```{r}
+iris.data  <- as.matrix(subset(iris, select = -Species))
+means <- aggregate(iris.data, list(groups = iris$Species), mean)
+means
+iris.data  <- iris.data - as.matrix(means[match(iris$Species, means$groups), -1])
+model <- list(cov = cov(iris.data), means = means[,-1, drop = FALSE])
+```
+
+Данные будем генерировать make.data
+Посмотрим, что получилось
+
+```{r}
+
+boot.data <- make.data(iris, iris$Species, model)
+splom(iris, groups = iris$Species)
+splom(boot.data, groups = boot.data$Species)
+
+```
+
+
+Далее делаем параметрический бутстраппинг аналогично примеру, только теперь make.data будет генерировать данные на основе model
+
+```{r}
+
+b.model <- boot(iris, function(data) {
+      tn <- tune(my.qda, Species ~ ., data = data,
+      predict.func = simple.predict.da,
+      tunecontrol = tune.control(sampling = "fix",
+      fix = 1/2))
+      tn$best.performance
+    }, R = 999, sim = "parametric", ran.gen = function(data,
+      mle, ..., size = 300) make.data(data,
+      mle$groups, mle$model, ...), mle = list(groups = iris$Species,
+      model = model))
+
+plot(b.model, index = 1)
+```
+
+Нормальности тут явно нет, так что строим перцентильный интервал
+
+```{r}
+boot.ci(b.model, type="perc")
+```
+

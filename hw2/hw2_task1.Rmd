@@ -1,0 +1,65 @@
+---
+title: "hw2_1"
+output: html_document
+---
+
+Загружаем данные и применяем контраст для пола
+
+```{r}
+library(MASS)
+library(lattice)
+library(latticeExtra)
+
+panel <- function(...) {  
+  panel.xyplot(...)
+  panel.loess(...)
+}
+
+teen.data <- read.table("teengambling.txt")
+
+teen.data$sex <- factor(teen.data$sex, labels = c("male", "female"))
+
+contrasts(teen.data$sex)
+contrasts(teen.data$sex) <- contr.sum
+contrasts(teen.data$sex)
+
+model.teen1 <- lm(gamble ~ ., data=teen.data )
+summary(model.teen1)
+model.teen1 <- stepAIC(model.teen1)
+summary(model.teen1)
+```
+
+Видим, что adjusted R-squared повысился, а RSE уменьшился, значит модель стала лучше, но все равно его значение еще слишком мало, чтобы считать модель хорошей.
+
+```{r}
+model.teen2 <- lm(gamble ~ sex +  income, data=teen.data)
+summary(model.teen2)
+anova(model.teen1, model.teen2)
+```
+
+Значит при удалении verbal все же модель ухудшается, хотя p-value у verbal велико.
+В общем нужно посмотреть на однородность данных по полу, т.к. есть подозрение, что мы имеем какие-то не очень хорошие данные.
+
+```{r}
+
+splom(teen.data, groups=teen.data$sex)
+
+```
+
+Получили очень занятную картинку - данные неоднородны по полу. Особенно хорошо видна неоднородность в доходах, где чем больше доход, тем более неоднородны данные. Также мне совсем не нравится неоднородность verbal по полу - самые маленькие значения verbal у мальчиков выглядят, как выбросы. При этом они имеют высокое значение gamble, что может неблагоприятно влиять на общий результат. А вот в доходах неоднородность вполне логично смотрится и я думаю, что можно попробовать перекрестное влияние этих признаков.
+
+```{r}
+model.teen4 <- lm(gamble ~ income:sex  + verbal , data=teen.data)
+summary(model.teen4)
+```
+
+Получили очень высоко значимый признак income:sexmale. Это логично, т.к по графикам хорошо видно, что доход сильно зависит от пола, а мужской пол при этом намного больше играет. 
+
+```{r}
+model.teen5 <- lm(gamble ~ -1 + income:sex , data=teen.data)
+summary(model.teen5)
+```
+
+Я не очень понимаю смысл intercept в данном контексте, и в общем то попробовав его убрать получил хороший результат. Также при этом уменьшилось значение p-value у verbal и я его тоже наконец-то убрал. Все-таки данные по verbal мне кажутся не очень адекватными. В итоге У модели значительно повысился r-squared, а также уменьшилось p-value.
+
+Т.е. мы можем сделать вывод, что у мальчиков хорошо проявленная линейная зависимость трат на игры от доходов

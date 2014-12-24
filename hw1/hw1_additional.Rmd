@@ -1,0 +1,90 @@
+---
+title: "hw1_additional"
+output: html_document
+---
+
+```{r}
+library(MASS)
+library(lattice)
+library(latticeExtra)
+library(boot)
+library(corrplot)
+
+adv.data <- read.csv("Advertising.csv")
+adv.data$X <- NULL
+
+model.final <- lm(Sales ~ TV + Radio + TV:Radio + I(TV^2), data = adv.data)
+summary(model.final)
+model.final
+```
+
+Bootstrap на model.final
+```{r}
+
+bs <- function(formula, data, indices) {
+  d <- data[indices,]
+  fit <- lm(formula, data=d)
+  return(coef(fit)) 
+} 
+b.model.final <- boot(data=adv.data, statistic=bs, 
+    R=1000, formula=Sales ~ TV + Radio + TV:Radio + I(TV^2))
+
+b.model.final
+
+```
+
+
+Протестируем на нормальность полученные результаты:
+```{r}
+plot(b.model.final, index=1) # intercept 
+shapiro.test(b.model.final$t[,1])
+plot(b.model.final, index=2) # TV
+shapiro.test(b.model.final$t[,2])
+```
+
+Для intercept  как график, так и тесты Шапиро-Уилка и критерий Пирсона дают хорошие результаты. Похоже для intercept имеем близкое к нормальному распределение. Для TV результаты теста Шапиро-Уилка хуже, но нет основания отвергать 0-ую гипотезу. Так что будем считать, что для TV тоже имеем близкое к нормальному распределение. Значит будем строить параметрический доверительный интервал для этих предикторов.
+
+```{r}
+
+plot(b.model.final, index=3) # Radio 
+shapiro.test(b.model.final$t[,3])
+plot(b.model.final, index=4) # I(TV^2)
+shapiro.test(b.model.final$t[,4])
+plot(b.model.final, index=5) # TV:Radio
+shapiro.test(b.model.final$t[,5])
+```
+Здесь и по графикам видно, и тест выдал результаты, по которым можно отвергнуть 0-ю гиботезу о том, что распределение является нормальным (p-value <= 0.05) с уровнем значимости 0.05
+значит будем строить перцентильные доверительные интервалы для этих предикторов
+
+Строим доверительные интервалы для предикторов:
+
+```{r}
+boot.ci(b.model.final, index=1) # intercept 
+```
+
+Для intercept доверительный интервал уровня доверия 0.95 самым узким является Normal. Т.к. мы можем выбирать для этого предиктора параметрический интервал, то возьмем его.
+
+
+```{r}
+boot.ci(b.model.final, index=2) # TV
+```
+
+Для TV аналогично выбираем Normal
+
+```{r} 
+boot.ci(b.model.final, type="perc", index=3) # Radio
+boot.ci(b.model.final, type="perc", index=4) # I(TV^2)
+boot.ci(b.model.final, type="perc", index=5) # TV:Radio
+
+```
+
+Строим доверительный интервал по model.final, а также Normal для TV intercept
+
+```{r}
+confint(model.final)
+boot.ci(b.model.final, type="norm", index=2) # TV
+boot.ci(b.model.final, type="norm", index=1) # intercept
+```
+
+Для всех предикторов получаем в случае confint(model.final) более узкие доверительные интервалы с одинаковым уровнем доверия, чем интервалы, построенные бутстрапом. К тому же для Radio I(TV^2) TV:Radio имеем только не параметрический доверительный интервал, т.е. он может быть уже точного, а значит эти интервалы намного хуже, чем confint(model.final)
+Т.е. лучше выбрать confint(model.final) доверительные интервалы.
