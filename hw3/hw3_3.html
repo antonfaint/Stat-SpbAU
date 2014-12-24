@@ -100,37 +100,37 @@ my.lda(sort ~ . )</code></pre>
 ## 
 ## Prior probabilities of groups:
 ##         1         2         3 
-## 0.4047619 0.2857143 0.3095238 
+## 0.3333333 0.3333333 0.3333333 
 ## 
 ## Group means:
 ##       area perimeter compactness kernel_length kernel_width asymmetry
-## 1 14.29039  14.27020   0.8806412      5.492725     3.240529  2.805886
-## 2 18.38333  16.16556   0.8826694      6.169444     3.677139  3.572306
-## 3 11.92538  13.25641   0.8518872      5.227410     2.869179  4.829641
+## 1 14.16024  14.20429   0.8804357      5.475048     3.224238  2.721786
+## 2 18.28643  16.13929   0.8808524      6.148571     3.664143  3.652881
+## 3 11.93500  13.28810   0.8486452      5.240095     2.855905  4.768833
 ##   groove_length
-## 1      5.068098
-## 2      6.045028
-## 3      5.094154
+## 1      5.068548
+## 2      6.018190
+## 3      5.130571
 ## 
 ## Coefficients of linear discriminants:
-##                        LD1         LD2
-## area            0.46426143   4.4672402
-## perimeter       1.38925614  -9.8750756
-## compactness   -19.20514147 -79.8685995
-## kernel_length  -5.83043823  -5.5352813
-## kernel_width    1.36837565   0.1782157
-## asymmetry      -0.05802248   0.3074618
-## groove_length   4.20071862   6.4378422
+##                      LD1         LD2
+## area          -0.2493294   4.0903032
+## perimeter      4.0334976  -7.8563716
+## compactness    6.7275582 -82.4855675
+## kernel_length -6.4556885  -6.5108337
+## kernel_width  -0.9647357  -1.0231087
+## asymmetry     -0.1035090   0.4505253
+## groove_length  2.6161293   5.8997554
 ## 
 ## Proportion of trace:
 ##    LD1    LD2 
-## 0.7025 0.2975 
+## 0.6987 0.3013 
 ##    
 ##      1  2  3
-##   1 17  1  1
-##   2  1 33  0
-##   3  1  0 30
-## [1] 0.04761905
+##   1 28  0  2
+##   2  0 28  0
+##   3  0  0 26
+## [1] 0.02380952
 ## 
 ## Error estimation of 'lda' using 10-fold cross validation: 0.1190476</code></pre>
 <p>Далее попробуем убрать area perimetr(т.к. через них рассчитывается compactness)</p>
@@ -140,36 +140,36 @@ my.lda(sort ~ . )</code></pre>
 ## 
 ## Prior probabilities of groups:
 ##         1         2         3 
-## 0.4047619 0.2857143 0.3095238 
+## 0.3333333 0.3333333 0.3333333 
 ## 
 ## Group means:
 ##   groove_length kernel_length kernel_width perimeter     area
-## 1      5.068098      5.492725     3.240529  14.27020 14.29039
-## 2      6.045028      6.169444     3.677139  16.16556 18.38333
-## 3      5.094154      5.227410     2.869179  13.25641 11.92538
+## 1      5.068548      5.475048     3.224238  14.20429 14.16024
+## 2      6.018190      6.148571     3.664143  16.13929 18.28643
+## 3      5.130571      5.240095     2.855905  13.28810 11.93500
 ##   groove_length:kernel_length
-## 1                    27.87914
-## 2                    37.34623
-## 3                    26.64369
+## 1                    27.80437
+## 2                    37.06909
+## 3                    26.89831
 ## 
 ## Coefficients of linear discriminants:
-##                                    LD1         LD2
-## groove_length                -4.864849   2.7883325
-## kernel_length               -16.019815 -10.4140569
-## kernel_width                  2.271159  -1.4231693
-## perimeter                     5.299898  -3.0154566
-## area                         -1.402034   0.8549703
-## groove_length:kernel_length   1.658126   0.9462628
+##                                     LD1        LD2
+## groove_length                -4.7092902  7.0533701
+## kernel_length               -15.5090758 -7.0741057
+## kernel_width                  0.7320875 -4.0073454
+## perimeter                     5.5501572 -1.5136896
+## area                         -0.9423317  0.8693477
+## groove_length:kernel_length   1.3490167  0.1183235
 ## 
 ## Proportion of trace:
 ##    LD1    LD2 
-## 0.7872 0.2128 
+## 0.8155 0.1845 
 ##    
 ##      1  2  3
-##   1 16  1  0
-##   2  1 33  0
-##   3  2  0 31
-## [1] 0.04761905
+##   1 28  0  2
+##   2  0 27  0
+##   3  0  1 26
+## [1] 0.03571429
 ## 
 ## Error estimation of 'lda' using 10-fold cross validation: 0.1047619</code></pre>
 <p>Сначала я решил ввести kernel_length groove_length и kernel_width, т.к. они неплохо отделяют сорта. Затем пробовал вводить новые предикторы - безуспешно. Также ввел перекрестное влияние, т.к. на графиках видна хорошая зависимость, и собственно это улучшило результат. Также попробовал ввести компактнесс, но он сильно портит картину. Поэтому вместо него решил ввести периметр и area, что и дало самую приятную тестовую ошибку на кросвалидации, а также просто на тестовой выборке. Эта модель не очень то сильно лучше общей модели, но все же в ней намного меньше зависимых предикторов, да и на тестовой выборке ошибка в 2 раза меньше. Решил остановиться на этой модели.</p>
@@ -194,57 +194,57 @@ my.bayes(as.factor(sort) ~ .)</code></pre>
 ## A-priori probabilities:
 ## Y
 ##         1         2         3 
-## 0.4047619 0.2857143 0.3095238 
+## 0.3333333 0.3333333 0.3333333 
 ## 
 ## Conditional probabilities:
 ##    area
 ## Y       [,1]      [,2]
-##   1 14.29039 1.0987119
-##   2 18.38333 1.3909134
-##   3 11.92538 0.7672708
+##   1 14.16024 1.2436306
+##   2 18.28643 1.4098725
+##   3 11.93500 0.6908222
 ## 
 ##    perimeter
 ## Y       [,1]      [,2]
-##   1 14.27020 0.5197326
-##   2 16.16556 0.5766130
-##   3 13.25641 0.3282849
+##   1 14.20429 0.6162124
+##   2 16.13929 0.5925241
+##   3 13.28810 0.3245352
 ## 
 ##    compactness
 ## Y        [,1]       [,2]
-##   1 0.8806412 0.01643796
-##   2 0.8826694 0.01619500
-##   3 0.8518872 0.02377022
+##   1 0.8804357 0.01503813
+##   2 0.8808524 0.01743535
+##   3 0.8486452 0.02078438
 ## 
 ##    kernel_length
 ## Y       [,1]      [,2]
-##   1 5.492725 0.2141082
-##   2 6.169444 0.2496742
-##   3 5.227410 0.1217099
+##   1 5.475048 0.2461296
+##   2 6.148571 0.2731611
+##   3 5.240095 0.1252354
 ## 
 ##    kernel_width
 ## Y       [,1]      [,2]
-##   1 3.240529 0.1723460
-##   2 3.677139 0.1906529
-##   3 2.869179 0.1658350
+##   1 3.224238 0.1731463
+##   2 3.664143 0.1910604
+##   3 2.855905 0.1408483
 ## 
 ##    asymmetry
 ## Y       [,1]     [,2]
-##   1 2.805886 1.258999
-##   2 3.572306 1.357973
-##   3 4.829641 1.454594
+##   1 2.721786 1.042645
+##   2 3.652881 1.186562
+##   3 4.768833 1.255045
 ## 
 ##    groove_length
 ## Y       [,1]      [,2]
-##   1 5.068098 0.2330315
-##   2 6.045028 0.2318753
-##   3 5.094154 0.1486781
+##   1 5.068548 0.2662961
+##   2 6.018190 0.2622142
+##   3 5.130571 0.1475339
 ## 
 ##           
 ## seed.pred1  1  2  3
-##          1 14  3  2
-##          2  2 31  0
-##          3  3  0 29
-## [1] 0.1190476
+##          1 25  2  2
+##          2  1 26  0
+##          3  2  0 26
+## [1] 0.08333333
 ## 
 ## Error estimation of 'naiveBayes' using 10-fold cross validation: 0.0952381</code></pre>
 <pre class="r"><code>my.bayes(as.factor(sort) ~ . - area - perimeter)</code></pre>
@@ -257,63 +257,64 @@ my.bayes(as.factor(sort) ~ .)</code></pre>
 ## A-priori probabilities:
 ## Y
 ##         1         2         3 
-## 0.4047619 0.2857143 0.3095238 
+## 0.3333333 0.3333333 0.3333333 
 ## 
 ## Conditional probabilities:
 ##    area
 ## Y       [,1]      [,2]
-##   1 14.29039 1.0987119
-##   2 18.38333 1.3909134
-##   3 11.92538 0.7672708
+##   1 14.16024 1.2436306
+##   2 18.28643 1.4098725
+##   3 11.93500 0.6908222
 ## 
 ##    perimeter
 ## Y       [,1]      [,2]
-##   1 14.27020 0.5197326
-##   2 16.16556 0.5766130
-##   3 13.25641 0.3282849
+##   1 14.20429 0.6162124
+##   2 16.13929 0.5925241
+##   3 13.28810 0.3245352
 ## 
 ##    compactness
 ## Y        [,1]       [,2]
-##   1 0.8806412 0.01643796
-##   2 0.8826694 0.01619500
-##   3 0.8518872 0.02377022
+##   1 0.8804357 0.01503813
+##   2 0.8808524 0.01743535
+##   3 0.8486452 0.02078438
 ## 
 ##    kernel_length
 ## Y       [,1]      [,2]
-##   1 5.492725 0.2141082
-##   2 6.169444 0.2496742
-##   3 5.227410 0.1217099
+##   1 5.475048 0.2461296
+##   2 6.148571 0.2731611
+##   3 5.240095 0.1252354
 ## 
 ##    kernel_width
 ## Y       [,1]      [,2]
-##   1 3.240529 0.1723460
-##   2 3.677139 0.1906529
-##   3 2.869179 0.1658350
+##   1 3.224238 0.1731463
+##   2 3.664143 0.1910604
+##   3 2.855905 0.1408483
 ## 
 ##    asymmetry
 ## Y       [,1]     [,2]
-##   1 2.805886 1.258999
-##   2 3.572306 1.357973
-##   3 4.829641 1.454594
+##   1 2.721786 1.042645
+##   2 3.652881 1.186562
+##   3 4.768833 1.255045
 ## 
 ##    groove_length
 ## Y       [,1]      [,2]
-##   1 5.068098 0.2330315
-##   2 6.045028 0.2318753
-##   3 5.094154 0.1486781
+##   1 5.068548 0.2662961
+##   2 6.018190 0.2622142
+##   3 5.130571 0.1475339
 ## 
 ##           
 ## seed.pred1  1  2  3
-##          1 14  3  2
-##          2  2 31  0
-##          3  3  0 29
-## [1] 0.1190476
+##          1 25  2  2
+##          2  1 26  0
+##          3  2  0 26
+## [1] 0.08333333
 ## 
-## Error estimation of 'naiveBayes' using 10-fold cross validation: 0.09047619</code></pre>
+## Error estimation of 'naiveBayes' using 10-fold cross validation: 0.1047619</code></pre>
 <p>В общем, что бы я не менял на байесе, на тестовой выборке вообще практически ничего не менялось, а кросс валидация изменялась от запуска к запуску в примерно одинаковых рамках</p>
 <p>Мультиномиальная регрессия</p>
 <pre class="r"><code>my.multinom &lt;- function(formula) {
   seed.multinom &lt;- multinom(formula , data = seed.data.train, maxit=3000, trace=FALSE)
+  
   print(seed.multinom)
   seed.pred1 &lt;- predict(seed.multinom, seed.data.test)
   
@@ -329,97 +330,110 @@ my.multinom(as.factor(sort) ~ .)</code></pre>
 ##     trace = FALSE)
 ## 
 ## Coefficients:
-##   (Intercept)      area perimeter compactness kernel_length kernel_width
-## 2   -42.86166  60.67897 -110.0737   -63.70347     -117.6080    -156.1629
-## 3    28.44237 -68.26668 -236.0337    79.97338      158.9586     515.3738
+##   (Intercept)      area  perimeter compactness kernel_length kernel_width
+## 2   -42.25512  79.91634  -60.01074   -62.66106     -348.0543   -137.97026
+## 3    17.43811 -32.33443 -124.87462    27.98645     -132.6429     46.28093
 ##   asymmetry groove_length
-## 2  3.119896      359.1118
-## 3 22.001097      299.1616
+## 2  49.19457      368.9998
+## 3  39.37612      492.2545
 ## 
-## Residual Deviance: 0.0001986903 
-## AIC: 32.0002 
+## Residual Deviance: 0.0001655632 
+## AIC: 32.00017 
 ##           
 ## seed.pred1  1  2  3
-##          1 17  2  2
-##          2  1 32  0
-##          3  1  0 29
+##          1 26  1  3
+##          2  2 27  0
+##          3  0  0 25
 ## [1] 0.07142857
 ## 
-## Error estimation of 'multinom' using 10-fold cross validation: 0.04761905</code></pre>
-<p>Поперебираем различные комбинации</p>
-<pre class="r"><code>my.multinom(as.factor(sort) ~ . - area - perimeter)</code></pre>
+## Error estimation of 'multinom' using 10-fold cross validation: 0.03809524</code></pre>
+<pre class="r"><code>seed.multinom &lt;- multinom(as.factor(sort) ~ . , data = seed.data.train, maxit=3000, trace=FALSE)
+stepAIC(seed.multinom)</code></pre>
+<pre><code>## Start:  AIC=32
+## as.factor(sort) ~ area + perimeter + compactness + kernel_length + 
+##     kernel_width + asymmetry + groove_length
+## 
+##                 Df    AIC
+## - kernel_width   2 28.000
+## - perimeter      2 28.000
+## - area           2 28.000
+## - compactness    2 28.000
+## &lt;none&gt;             32.000
+## - kernel_length  2 36.165
+## - asymmetry      2 49.847
+## - groove_length  2 55.254
+## 
+## Step:  AIC=28
+## as.factor(sort) ~ area + perimeter + compactness + kernel_length + 
+##     asymmetry + groove_length
+## 
+##                 Df    AIC
+## - area           2 24.000
+## - perimeter      2 24.000
+## - compactness    2 24.000
+## &lt;none&gt;             28.000
+## - kernel_length  2 31.264
+## - asymmetry      2 50.786
+## - groove_length  2 53.914
+## 
+## Step:  AIC=24
+## as.factor(sort) ~ perimeter + compactness + kernel_length + asymmetry + 
+##     groove_length
+## 
+##                 Df    AIC
+## - compactness    2 20.000
+## &lt;none&gt;             24.000
+## - perimeter      2 26.892
+## - kernel_length  2 29.027
+## - asymmetry      2 47.671
+## - groove_length  2 50.710
+## 
+## Step:  AIC=20
+## as.factor(sort) ~ perimeter + kernel_length + asymmetry + groove_length
+## 
+##                 Df    AIC
+## &lt;none&gt;             20.000
+## - kernel_length  2 27.217
+## - perimeter      2 40.544
+## - asymmetry      2 45.007
+## - groove_length  2 55.764</code></pre>
+<pre><code>## Call:
+## multinom(formula = as.factor(sort) ~ perimeter + kernel_length + 
+##     asymmetry + groove_length, data = seed.data.train, maxit = 3000, 
+##     trace = FALSE)
+## 
+## Coefficients:
+##   (Intercept)  perimeter kernel_length asymmetry groove_length
+## 2   -704.0355   96.17748  -403.3221167  24.15177      271.7281
+## 3    295.9982 -153.82694    -0.5216049  32.80023      332.0032
+## 
+## Residual Deviance: 0.0001998062 
+## AIC: 20.0002</code></pre>
+<pre class="r"><code>seed.multinom &lt;- multinom(as.factor(sort) ~ area + kernel_length + asymmetry + groove_length , data = seed.data.train, maxit=3000, trace=FALSE)
+AIC(seed.multinom)</code></pre>
+<pre><code>## [1] 20.00179</code></pre>
+<pre class="r"><code>my.multinom(as.factor(sort) ~ area + kernel_length + asymmetry + groove_length )</code></pre>
 <pre><code>## Call:
 ## multinom(formula = formula, data = seed.data.train, maxit = 3000, 
 ##     trace = FALSE)
 ## 
 ## Coefficients:
-##   (Intercept) compactness kernel_length kernel_width  asymmetry
-## 2   -98.39708   -88.49740     -47.77310     20.85048 0.05496144
-## 3    21.50636    59.77607     -36.14287    -18.50298 2.09201807
-##   groove_length
-## 2      68.33289
-## 3      33.03129
+##   (Intercept)      area kernel_length asymmetry groove_length
+## 2   -121.6858  26.32326     -277.6242  16.30232      225.0416
+## 3    -33.1814 -19.06125     -148.7460  19.72270      195.8288
 ## 
-## Residual Deviance: 11.69002 
-## AIC: 35.69002 
+## Residual Deviance: 0.001791756 
+## AIC: 20.00179 
 ##           
 ## seed.pred1  1  2  3
-##          1 17  1  1
-##          2  1 33  0
-##          3  1  0 30
-## [1] 0.04761905
-## 
-## Error estimation of 'multinom' using 10-fold cross validation: 0.04761905</code></pre>
-<pre class="r"><code>my.multinom(as.factor(sort) ~ groove_length  + kernel_length + groove_length:kernel_length  + kernel_width + perimeter + area)</code></pre>
-<pre><code>## Call:
-## multinom(formula = formula, data = seed.data.train, maxit = 3000, 
-##     trace = FALSE)
-## 
-## Coefficients:
-##   (Intercept) groove_length kernel_length kernel_width  perimeter
-## 2   -6.039241      38.24986     -74.23177    -20.50890  -6.774975
-## 3  -91.700769      40.62545      28.23299     36.33437 -16.021489
-##        area groove_length:kernel_length
-## 2  8.259299                    8.057537
-## 3 -5.908766                   -2.932784
-## 
-## Residual Deviance: 17.18945 
-## AIC: 45.18945 
-##           
-## seed.pred1  1  2  3
-##          1 16  2  2
-##          2  1 32  0
-##          3  2  0 29
-## [1] 0.08333333
-## 
-## Error estimation of 'multinom' using 10-fold cross validation: 0.05238095</code></pre>
-<pre class="r"><code>my.multinom(as.factor(sort) ~ . + area:perimeter + compactness:area + compactness:perimeter)</code></pre>
-<pre><code>## Call:
-## multinom(formula = formula, data = seed.data.train, maxit = 3000, 
-##     trace = FALSE)
-## 
-## Coefficients:
-##   (Intercept)       area perimeter compactness kernel_length kernel_width
-## 2   -90.42514   82.47095 -613.4848   -52.64936     -471.6362     103.6397
-## 3   111.99184 -671.25906 -607.0221   148.86300     -119.7112     692.8159
-##   asymmetry groove_length area:perimeter area:compactness
-## 2  11.90564      1785.304      -5.963278         326.4122
-## 3 146.12854      1707.470      -4.037893         373.5722
-##   perimeter:compactness
-## 2             -201.6077
-## 3              220.1101
-## 
-## Residual Deviance: 0.0001850328 
-## AIC: 44.00019 
-##           
-## seed.pred1  1  2  3
-##          1 17  2  1
-##          2  1 32  0
-##          3  1  0 30
+##          1 27  0  4
+##          2  0 28  0
+##          3  1  0 24
 ## [1] 0.05952381
 ## 
-## Error estimation of 'multinom' using 10-fold cross validation: 0.05238095</code></pre>
-<p>В общим перебирал, перебирал… Обычная модель давала самую маленькую ошибку.</p>
+## Error estimation of 'multinom' using 10-fold cross validation: 0.02857143</code></pre>
+<p>Отлично! AIC подобрал нам замечательную модель. Тестовая ошибка немного меньше, чем тестовая ошибка мультиномиальной регрессии на полном наборе параметров. При этом ошибка на тестовой выборке уменьшилась вдвое.</p>
+<p>Также в данной модели тестовая ошибка меньше примерно в 2 раза, чем в модели с наивным Байесом и lda. На тестовой выборке аналогично ошибка меньше, примерно в 2 раза</p>
 
 
 </div>

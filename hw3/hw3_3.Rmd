@@ -92,6 +92,7 @@ my.bayes(as.factor(sort) ~ . - area - perimeter)
 ```{r}
 my.multinom <- function(formula) {
   seed.multinom <- multinom(formula , data = seed.data.train, maxit=3000, trace=FALSE)
+  
   print(seed.multinom)
   seed.pred1 <- predict(seed.multinom, seed.data.test)
   
@@ -102,14 +103,22 @@ my.multinom <- function(formula) {
 }
 
 my.multinom(as.factor(sort) ~ .)
-```
 
-Поперебираем различные комбинации
+```
 
 ```{r}
-my.multinom(as.factor(sort) ~ . - area - perimeter)
-my.multinom(as.factor(sort) ~ groove_length  + kernel_length + groove_length:kernel_length  + kernel_width + perimeter + area)
-my.multinom(as.factor(sort) ~ . + area:perimeter + compactness:area + compactness:perimeter)
+
+seed.multinom <- multinom(as.factor(sort) ~ . , data = seed.data.train, maxit=3000, trace=FALSE)
+stepAIC(seed.multinom)
+
+seed.multinom <- multinom(as.factor(sort) ~ area + kernel_length + asymmetry + groove_length , data = seed.data.train, maxit=3000, trace=FALSE)
+AIC(seed.multinom)
+
+my.multinom(as.factor(sort) ~ area + kernel_length + asymmetry + groove_length )
+
 ```
 
-В общим перебирал, перебирал... Обычная модель давала самую маленькую ошибку.
+Отлично! AIC подобрал нам замечательную модель. Тестовая ошибка немного меньше, чем тестовая ошибка мультиномиальной регрессии на полном наборе параметров. При этом ошибка на тестовой выборке уменьшилась вдвое.
+
+Также в данной модели тестовая ошибка меньше примерно в 2 раза, чем в модели с наивным Байесом и lda. На тестовой выборке аналогично ошибка меньше, примерно в 2 раза
+
