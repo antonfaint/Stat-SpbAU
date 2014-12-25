@@ -1,0 +1,234 @@
+---
+title: "hw3_2"
+output: html_document
+---
+
+```{r}
+library(lattice)
+library(ggplot2)
+library(ROCR)
+library(latticeExtra)
+library(corrplot)
+library(MASS)
+library(e1071)
+library(knitr)
+library(nnet)
+library(caret)
+library(stats)
+
+ROC <- function(predicted, actual, ...) {
+  pred <- prediction(predicted, as.numeric(actual))
+  roc <- performance(pred, measure = "tpr",
+  x.measure = "fpr", ...)
+  roc
+}
+
+simple.predict.da <- function(...) predict(...)$class
+simple.predict.glm <- function(x, newdata, ...) {
+  response <- predict(x, newdata, type = "response", ...)
+  factor(levels(x$model[, 1])[1 + as.integer(response > 0.5)]) 
+}
+
+park.data <- read.csv("data/parkinsons.csv", comment.char = "#")
+park.data$name <- NULL
+park.data$MDVP.Jitter.Abs. <- NULL
+names(park.data)
+
+```
+
+Убирааем Jitter.Abs, т.к есть значения в процентах
+
+```{r}
+corrplot(cor(park.data))
+marginal.plot(park.data)
+```
+
+Много кореллирующих предикторов
+
+```{r}
+park.idx <- sample(nrow(park.data), size = nrow(park.data) * 0.666)
+park.data.train <- park.data[park.idx,]
+park.data.test <- park.data[-park.idx,]
+```
+
+LDA
+
+```{r}
+
+my.lda <- function(formula) {
+  park.lda1 <- lda(formula , data = park.data.train)
+  print(park.lda1)
+  park.pred1 <- predict(park.lda1, park.data.test)
+  
+  print(table(park.pred1$class, park.data.test$status))
+  print(mean(park.pred1$class != park.data.test$status))
+
+  print(tune(lda, formula, data = park.data, predict.func = simple.predict.da, tunecontrol = tune.control(sampling = "cross")))
+  return(park.lda1)
+}
+
+model.lda <- my.lda(as.factor(status)  ~ .)
+
+```
+Сразу неплохо. И ошибка на тестовой выборке, и тестовая ошибка не очень большие.
+
+
+NaiveBayes
+
+```{r}
+my.bayes <- function(formula) {
+  park.bayes <- naiveBayes(formula , data = park.data.train)
+  print(park.bayes)
+  park.pred1 <- predict(park.bayes, park.data.test)
+  
+  print(table(park.pred1, park.data.test$status))
+  print(mean(park.pred1 != park.data.test$status))
+
+  print(tune(naiveBayes, formula, data = park.data))  
+  return(park.bayes)
+}
+model.bayes <- my.bayes(as.factor(status) ~ .)
+
+```
+
+Здесь примерно в 3 раза хуже.
+
+Мультиномиальная регрессия
+
+```{r}
+my.multinom <- function(formula) {
+  park.multinom <- multinom(formula , data = park.data.train, maxit=3000, trace=FALSE)
+  
+  print(park.multinom)
+  park.pred1 <- predict(park.multinom, park.data.test)
+  
+  print(table(park.pred1, park.data.test$status))
+  print(mean(park.pred1 != park.data.test$status))
+  
+
+  print(tune(multinom, formula, data = park.data, maxit=3000, tunecontrol =tune.control(sampling = "cross"), trace=FALSE))  
+  return(park.multinom)
+}
+
+model.multinom <- my.multinom(as.factor(status) ~ .)
+
+```
+
+Немного хуже, чем lda
+Попробуем stepAIC
+
+(Скрываю трейсы)
+
+```{r}
+
+park.multinom <- multinom(as.factor(status) ~ . , data = park.data.train, maxit=3000, trace=FALSE)
+park.multinom.aic <- stepAIC(park.multinom,trace=FALSE)
+park.multinom.aic$call
+
+```
+
+```{r}
+model.multinom.aic <- my.multinom(as.factor(status) ~ MDVP.Fo.Hz. + MDVP.Flo.Hz. + 
+    MDVP.Jitter... + Jitter.DDP + MDVP.Shimmer + Shimmer.APQ3 + 
+    Shimmer.DDA + NHR + RPDE + spread1 + spread2 + PPE)
+```
+
+
+Получили примерно тоже самое
+
+
+Теперь glm
+
+```{r}
+my.glm <- function(formula) {
+  model.glm <- glm(formula, data = park.data.train, family = binomial(link = "logit"))
+  print(model.glm)
+  park.pred1 <-simple.predict.glm(model.glm, newdata=park.data.test, measure = "max")
+  print(table(park.pred1, park.data.test$status))
+  print(mean(park.pred1 != park.data.test$status)) 
+  
+  glm.tune = tune(glm, formula, data = park.data, family = binomial(link = "logit"), predict.func = simple.predict.glm, tunecontrol = tune.control(sampling = "cross"), trace=FALSE)
+  print(glm.tune)
+  return(model.glm)
+}
+model.glm <- my.glm(as.factor(status) ~ .)
+
+```
+
+Плохо, нужно повыкидывать лишние параметры с помощью AIC
+
+```{r}
+
+model.glm.aic <- stepAIC(model.glm, trace=FALSE)
+```
+
+
+```{r}
+model.glm.aic <- my.glm(model.glm.aic$formula)
+```
+
+
+Великолепно.
+После stepAIC получили модель примерно в 1.5 раза лучше multinom и немного лучше lda
+
+Можно еще lda проверить на полученных формулах
+
+```{r}
+
+mode.lda2 <- my.lda(as.factor(status)  ~ MDVP.Jitter... + MDVP.RAP + MDVP.Shimmer + Shimmer.APQ5 + Shimmer.DDA + DFA + D2 + PPE)
+model.lda3 <- my.lda(as.factor(status)  ~ MDVP.Fo.Hz. + MDVP.Flo.Hz. + 
+    MDVP.Jitter... + Jitter.DDP + MDVP.Shimmer + Shimmer.APQ3 + 
+    Shimmer.DDA + NHR + RPDE + spread1 + spread2 + PPE)
+```
+
+На последней формуле получили отличный результат - примерно такой же, как на glm
+
+Теперь сгруппируем данные.
+
+```{r}
+
+park.data <- read.csv("data/parkinsons.csv", comment.char = "#")
+park.data$MDVP.Jitter.Abs. <- NULL
+park.data = aggregate(subset(park.data, select = c(-name, -status)), list(park.data$name, park.data$status), mean)
+names(park.data)[2] = "status"
+park.data$Group.1 <- NULL
+
+park.idx <- sample(nrow(park.data), size = nrow(park.data) * 0.666)
+park.data.train <- park.data[park.idx,]
+park.data.test <- park.data[-park.idx,]
+
+```
+ 
+ AIC
+ 
+```{r}
+model.glm.group.simple <- my.glm(as.factor(status) ~ .) 
+model.glm.group.aic <- stepAIC(model.glm.group.simple, trace=FALSE)
+
+
+```
+
+```{r}
+model.glm.group <- my.glm(model.glm.group.aic$formula)
+
+plot(ROC(predict(model.glm.group, park.data), park.data$status))
+plot(ROC(predict(model.glm.aic, park.data), park.data$status))
+```
+
+
+
+```{r}
+
+model.lda.group <-my.lda(as.factor(status)  ~ MDVP.Fo.Hz. + MDVP.Flo.Hz. + MDVP.Jitter... + Jitter.DDP + MDVP.Shimmer + Shimmer.APQ3 + Shimmer.DDA + NHR + RPDE + spread1 + spread2 + PPE)
+
+```
+
+Для lda небольшое улучшение
+
+```{r}
+AIC(model.multinom, model.multinom.aic, model.glm, model.glm.aic, model.glm.group)
+
+anova(model.glm.aic, model.glm.group)
+```
+
+Видимо все-таки после групировки ничего для glm не улучшилось. А вот lda немного вышел вперед
